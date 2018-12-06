@@ -23,6 +23,8 @@ from absl import app
 from absl import flags
 
 import tensorflow as tf
+import pdb
+
 
 import adversarial_attack
 import model_lib
@@ -143,6 +145,11 @@ def _get_finetuning_init_fn(variable_averages):
     return None
 
 
+def get_hardest_negative_logit(logits,one_hot_labels):
+
+    hardest_negative_logits = []
+    return hardest_negative_logits
+
 def main(_):
   assert FLAGS.output_dir, '--output_dir has to be provided'
   if not tf.gfile.Exists(FLAGS.output_dir):
@@ -170,6 +177,8 @@ def main(_):
       # set up model
       global_step = tf.train.get_or_create_global_step()
       model_fn = model_lib.get_model(FLAGS.model_name, num_classes)
+
+
       if params.train_adv_method == 'clean':
         logits = model_fn(images, is_training=True)
         adv_examples = None
@@ -180,10 +189,12 @@ def main(_):
         all_examples = tf.concat([images, adv_examples], axis=0)
         logits = model_fn(all_examples, is_training=True)
         one_hot_labels = tf.concat([one_hot_labels, one_hot_labels], axis=0)
-
       # update trainable variables if fine tuning is used
       model_lib.filter_trainable_variables(
           FLAGS.finetune_trainable_scopes)
+      pdb.set_trace()
+      
+      hardest_negative_logits = get_hardest_negative_logit(logits,one_hot_labels)
 
       # set up losses
       total_loss = tf.losses.softmax_cross_entropy(
@@ -198,6 +209,15 @@ def main(_):
             images1, images2, weights=params.train_lp_weight)
         tf.summary.scalar('loss_lp', loss_lp)
         total_loss += loss_lp
+
+
+      if params.train_hn_weight > 0:
+          images1, images2 = tf.split(logits, 2)
+          loss_hn = tf.losses.mean_squared_error(
+            images2, hardest_negative_logits, weights=params.train_hn_weight)
+          tf.summary.scalar('loss_hn', loss_hn)
+          total_loss -= loss_hn
+
 
       if params.weight_decay > 0:
         loss_wd = (

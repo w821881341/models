@@ -122,10 +122,10 @@ ImageNet 64x64:
 python train.py \
   --model_name="resnet_v2_50" \
   --hparams="train_adv_method=pgdll_16_2_10,train_lp_weight=0.5" \
-  --dataset="imagenet" \
+  --dataset="tiny_imagenet" \
   --dataset_image_size=64 \
-  --output_dir="/tmp/adv_train" \
-  --imagenet_data_dir="${IMAGENET_DIR}"
+  --output_dir="models/adv_train" \
+  --tiny_imagenet_data_dir="tiny-imagenet-tfrecord"
 ```
 
 ### Fine tuning
